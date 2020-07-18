@@ -1,0 +1,68 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "Research Reimagine Host"
+
+Parameters: 
+    SGVpc: 
+      Type: 'AWS::EC2::VPC::Id'
+      Description: "Select VPC to deploy Security Groups"
+
+    SGVpcName:
+      Type: String
+      Default: SG
+   
+    ProServer:
+      Type: AWS::SSM::Parameter::Value<String>
+      Default: "Rstudio"
+
+    RStudioProServer:
+      Type: String
+      Default: "t2.micro"
+      Description: Instance type for Bastion Host
+
+    SubnetAZA:
+      Type: "AWS::EC2::Subnet::Id"
+      Description: The subnet to use for the Servers in AZ A
+
+    KeyPair:
+      Type: "AWS::EC2::KeyPair::KeyName"
+      Default: "riley-bastion-key"
+      Description: KeyPair to assign to Instance
+
+    ProServerName:
+      Type: String
+      Default: PrivateProServer
+
+Resources:
+
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: Allow http to client host
+        VpcId: !Ref SGVpc
+        SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.0.6.0/24
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.0.7.0/24
+        Tags: 
+          - Key: "Name"
+            Value: !Join [ "-", [ !Ref SGVpcName, !Ref SGVpc] ]
+
+  RRProServer:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      ImageId: !Ref ProServer
+      InstanceType: !Ref RStudioProServer
+      SourceDestCheck: "false"
+      KeyName: !Ref KeyPair
+      SubnetId: !Ref SubnetAZA
+      SecurityGroupIds:
+            - !GetAtt "InstanceSecurityGroup.GroupId"
+      Tags: 
+          - Key: "Name"
+            Value: !Ref ProServerName  
